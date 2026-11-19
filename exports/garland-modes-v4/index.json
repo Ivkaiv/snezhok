@@ -1,0 +1,27 @@
+{
+  "assets": {
+    "color-breath.zip-tail": "9b162527c46a9c92e589a3174d52d94616fb7550ca12ff8a930a66d77fc214f9",
+    "color-sparks.zip-tail": "4dfba0c8581df00afdb18c7c596bcc97a3f2a88cb4d889e8fd33c7a03a3480d5",
+    "color-steady.zip-tail": "456a152a03553b5142ce52f7a1f56aa4b70f1438249a345783480fe73870b0ea",
+    "color-twinkle.zip-tail": "474f8192370f237bd2ac30e20c3b1ad54f93fc1576328c087554a1ebba499640",
+    "color-wave.zip-tail": "66f05e3478dbbef762dc916c67d45abebf4f2732bcd3da9527e270acea1c6128",
+    "common.zip-part": "ecfc424fed776eba6788d33e65546541901d19e5190ed1a9f3f38a8521d1b1d5",
+    "warm-breath.zip-tail": "69f52aeae70c9279beb4bf59e50d6d126b04029daee029b3e9ff3b51f018cea7",
+    "warm-sparks.zip-tail": "13f145486eca1728554eac8a0bcd3c5b19e4005d07523285ddbace1f5e89daed",
+    "warm-steady.zip-tail": "e9be109ff09cba309339133d64153e2713ec8b72b4a5fb21cef3ac9ec03c5e0c",
+    "warm-twinkle.zip-tail": "fc681fea1226093784348585f250b98f0c1c5e1befde57f4d56389f9c729170c",
+    "warm-wave.zip-tail": "cf5a99ff150a84c242243b56f49e13664028a87ab7c04db3fb36bf35acb85695"
+  },
+  "themes": {
+    "color-breath": "475a0488ae936a78c194ae2344b6f78f1c6d5b2c034eeed8d7a5bb01c93dc682",
+    "color-sparks": "b3b74315e77affd212cf3d165e63992dfe45648cf33c0eb753968bd1a751b8ef",
+    "color-steady": "4691f38b986838a2388f1caf69ce523ac36caa28845a9a48da3f2fc25569194c",
+    "color-twinkle": "937dfcf0014c44177c9dde2e4b0831d5ffc7599e039cae3eb6c425f2fed8fa69",
+    "color-wave": "06898a9fe1b6cad147d2cbc773522514397431051612ec69db6b4754230e2fdb",
+    "warm-breath": "fe3ebc1d533f9279f3a895b99f874d7fcb2514de83a032e84588cd10dddd2c1b",
+    "warm-sparks": "6e4e7f0f662c5f51b8c8e1f158f64225f8ed1e0ce20cf7102d69b2bcb6eab110",
+    "warm-steady": "92a8677c02a34a403a2f4a743c29ca7d5593ad3a3d67094b04f5696276931def",
+    "warm-twinkle": "bc5c1fc29d50835548571e956dcdedfc8389d68af023018708b26588a2c20cd5",
+    "warm-wave": "1446556278e8c10eb683a37bd1a9d18e8ec509db6736fb16d0663bba4632c197"
+  }
+}

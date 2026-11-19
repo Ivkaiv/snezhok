@@ -1,0 +1,15 @@
+# Squirrel jump sprite sheet — 17 November 2026
+
+- Backend: built-in `image_gen.imagegen`, transparent_background=true. No CLI/API fallback and no post-generation image editing.
+- File: `squirrel-jump-sheet-v1.png`.
+- Actual size: **1254 × 1254**, RGBA; **2 × 2 equal cells of 627 × 627**. Requested ideal 1024 × 1024 was not returned; renderer must use actual dimensions.
+- Bytes: **1,857,983**.
+- SHA256: `d6e2c8c451512c3db9ac7c705250b89364099be9f9f90e10b958d33f7cc702af`.
+- Alpha: 0–255, 781,488 fully transparent pixels of 1,572,516. Image was visually inspected; four right-facing realistic squirrel poses, natural detailed fur, no branches/background/text/grid.
+- Order: top-left crouching, top-right pushing upward/right, bottom-left stretched airborne jump, bottom-right landing.
+- At alpha≥32, per-cell bounding boxes (x0,y0,x1,y1; cell-local): TL (41,68,529,544), TR (34,39,561,554), BL (4,69,625,450), BR (55,50,589,536). Main silhouettes stay within their cells; the airborne pose has a narrow horizontal margin. Very faint transparent edge pixels can extend farther.
+- The original image file is kept outside this repository.
+
+Final prompt:
+
+Use case: photorealistic-natural. Asset type: one square RGBA animation sprite sheet for a premium realistic Christmas-tree live wallpaper. Create exactly FOUR separate full-body poses of the SAME natural red Eurasian squirrel (Sciurus vulgaris), arranged as a strict 2 by 2 sheet of equal square cells, ideally 1024 x 1024 pixels overall. The cells are invisible: absolutely no drawn grid, dividers, labels or border. Each squirrel is fully contained in its own quadrant with generous transparent padding; no anatomy, tail, paws or fur crosses a quadrant boundary. Consistent scale, consistent animal identity, rich natural rust-red fur, tufted ears, creamy belly and large fluffy tail, anatomically convincing small real squirrel. Exact cell order: TOP LEFT: side view facing right, crouching/sitting on haunches ready to jump, tail lifted and curling upward; TOP RIGHT: same squirrel pushing off upward-right with hind legs extending, body lifting; BOTTOM LEFT: same squirrel in midair leaping right, body stretched horizontally, forepaws reaching forward and hind legs back, tail flowing behind; BOTTOM RIGHT: same squirrel landing facing right, forepaws low and body tilted forward, hindquarters following, tail curved up. Highly detailed soft natural fur, realistic photographic / high-end cinematic creature quality, with subtle warm fairy-light illumination and a gentle cool nighttime fill matching a luxurious Christmas fir. Keep all four profiles facing right, no perspective changes and no extra animals within any cell. Native transparent alpha background everywhere around the animals; no room, scenery, branch, tree, floor, perch, ground, cast background shadow or drawn motion lines. No text, digits, watermark, checkerboard, frame or UI. Not cartoon, not emoji, not vector, not toy, not clay. Four isolated individual squirrel poses ready for animation frame cropping.
