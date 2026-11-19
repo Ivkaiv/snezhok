@@ -88,6 +88,8 @@ public class MainActivity extends Activity {
     private boolean startRequested;
     private boolean resumed;
     private String systemUiPauseToken;
+    private static final int NOTIFICATION_PERMISSION = 20;
+    private static final int OVERLAY_SETTINGS_REQUEST = 22;
     private static final int SYSTEM_UI_REQUEST = 71;
     private final Runnable statusRefresh = new Runnable() {
         @Override public void run() {
@@ -280,6 +282,13 @@ public class MainActivity extends Activity {
         battery.setOnClickListener(view -> openSystemUi(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
                 Uri.parse("package:" + getPackageName()))));
         system.addView(battery);
+        if (Build.VERSION.SDK_INT >= 33) {
+            Button notifications = secondary("Уведомления");
+            notifications.setOnClickListener(view -> openSystemUi(
+                    new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                            .putExtra(Settings.EXTRA_APP_PACKAGE, getPackageName())));
+            add(system, notifications, 8, 0);
+        }
         return page;
     }
 
@@ -346,8 +355,14 @@ public class MainActivity extends Activity {
         }));
         add(section, picker, 0, 5);
         smsUsageAccess = secondary("Разрешить доступ к статистике");
-        smsUsageAccess.setOnClickListener(view ->
-                openSystemUi(new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)));
+        smsUsageAccess.setOnClickListener(view -> new AlertDialog.Builder(this)
+                .setTitle("Исключения для приложений")
+                .setMessage("Доступ нужен, чтобы узнать, открыто ли выбранное приложение, и скрыть над ним снег. "
+                        + "Эти сведения остаются на телефоне.")
+                .setNegativeButton("Позже", null)
+                .setPositiveButton("Открыть настройки", (dialog, which) ->
+                        openSystemUi(new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)))
+                .show());
         add(section, smsUsageAccess, 4, 4);
         smsDiagnostic = secondary("Проверить скрытие снега");
         smsDiagnostic.setOnClickListener(view -> startExclusionProbe());
@@ -362,35 +377,24 @@ public class MainActivity extends Activity {
     private LinearLayout buildWallpaperPage() {
         LinearLayout page = column();
         LinearLayout destinations = card();
-        destinations.addView(sectionTitle("Рабочий стол"));
+        destinations.addView(sectionTitle("Живые обои Android"));
+        WallpaperManager manager = WallpaperManager.getInstance(this);
+        boolean canSetWallpaper = manager.isWallpaperSupported() && manager.isSetWallpaperAllowed();
         Button setWallpaper = secondary("Установить живые обои");
         setWallpaper.setOnClickListener(view ->
                 openSystemUi(new Intent(WallpaperManager.ACTION_CHANGE_LIVE_WALLPAPER)
                         .putExtra(WallpaperManager.EXTRA_LIVE_WALLPAPER_COMPONENT,
                                 new ComponentName(this, SnowWallpaperService.class))));
+        setWallpaper.setEnabled(canSetWallpaper);
         add(destinations, setWallpaper, 12, 0);
+        add(destinations, text(canSetWallpaper
+                ? "Вариант для экрана блокировки появится, если его предлагает Android."
+                : "Установка обоев сейчас недоступна на этом устройстве.", 13, MUTED), 6, 0);
         page.addView(destinations);
 
-        LinearLayout lock = card();
-        lock.addView(sectionTitle("Экран блокировки"));
-        add(lock, text("Цвет гирлянды", 15, TEXT), 10, 3);
-        addGarlandChoice(lock);
-        Button effect = secondary(effectLabel());
-        effect.setOnClickListener(view -> chooseEffect(effect));
-        add(lock, effect, 8, 0);
-        saveThemeButton = secondary("Сохранить тему HONOR");
-        saveThemeButton.setOnClickListener(view -> {
-            HonorThemeExport.Selection choice = new HonorThemeExport.Selection(selectedGarland(), selectedEffect());
-            openSystemUi(HonorThemeExport.createDocument(choice), choice.requestCode());
-        });
-        add(lock, saveThemeButton, 12, 0);
-        add(lock, text("Папка для сохранения: HONOR/Themes", 13, MUTED), 6, 0);
         if (getPackageManager().getLaunchIntentForPackage(HonorThemeExport.THEMES_PACKAGE) != null) {
-            Button themeApp = secondary("Открыть «Темы»");
-            themeApp.setOnClickListener(view -> openHonorThemes());
-            add(lock, themeApp, 8, 0);
+            addHonorLockCard(page);
         }
-        add(page, lock, 12, 0);
 
         LinearLayout scene = expandable(page, "Настроить живые обои");
         switchRow(scene, "Снег на рабочем столе", "wallpaper_snow", true);
@@ -417,7 +421,7 @@ public class MainActivity extends Activity {
         switchRow(previewSettings, "Дополнительные часы", "holiday_clock", false);
         slider(previewSettings, "Положение часов", "holiday_clock_y", 30, 12, 65);
 
-        LinearLayout more = expandable(page, "Диагностика обоев");
+        LinearLayout more = expandable(page, "Статус установки обоев");
         wallpaperAssignment = text("", 13, MUTED);
         add(more, wallpaperAssignment, 0, 8);
         Button checkAssignment = secondary("Обновить статус");
@@ -426,8 +430,30 @@ public class MainActivity extends Activity {
         Button wallpaperList = secondary("Список живых обоев Android");
         wallpaperList.setOnClickListener(view -> openSystemUi(
                 new Intent(WallpaperManager.ACTION_LIVE_WALLPAPER_CHOOSER)));
+        wallpaperList.setEnabled(canSetWallpaper);
         more.addView(wallpaperList);
         return page;
+    }
+
+    private void addHonorLockCard(LinearLayout page) {
+        LinearLayout lock = card();
+        lock.addView(sectionTitle("Тема блокировки HONOR"));
+        add(lock, text("Цвет гирлянды", 15, TEXT), 10, 3);
+        addGarlandChoice(lock);
+        Button effect = secondary(effectLabel());
+        effect.setOnClickListener(view -> chooseEffect(effect));
+        add(lock, effect, 8, 0);
+        saveThemeButton = secondary("Сохранить тему HONOR");
+        saveThemeButton.setOnClickListener(view -> {
+            HonorThemeExport.Selection choice = new HonorThemeExport.Selection(selectedGarland(), selectedEffect());
+            openSystemUi(HonorThemeExport.createDocument(choice), choice.requestCode());
+        });
+        add(lock, saveThemeButton, 12, 0);
+        add(lock, text("Папка для сохранения: HONOR/Themes", 13, MUTED), 6, 0);
+        Button themeApp = secondary("Открыть «Темы»");
+        themeApp.setOnClickListener(view -> openHonorThemes());
+        add(lock, themeApp, 8, 0);
+        add(page, lock, 12, 0);
     }
 
     private HonorThemeExport.Garland selectedGarland() {
@@ -501,23 +527,49 @@ public class MainActivity extends Activity {
 
     private void requestStart() {
         if (!Settings.canDrawOverlays(this)) {
-            waitingOverlay = true;
-            try {
-                startActivity(new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                        Uri.parse("package:" + getPackageName())));
-            } catch (android.content.ActivityNotFoundException error) {
-                waitingOverlay = false;
-                Toast.makeText(this, "Разреши приложению показ поверх других окон в настройках Android", Toast.LENGTH_LONG).show();
-            }
+            new AlertDialog.Builder(this)
+                    .setTitle("Снег поверх приложений")
+                    .setMessage(Build.VERSION.SDK_INT >= 30
+                            ? "В настройках Android выбери «Снежок» и разреши показ поверх других приложений."
+                            : "Разреши «Снежку» показ поверх других приложений в настройках Android.")
+                    .setNegativeButton("Позже", null)
+                    .setPositiveButton("Открыть настройки", (dialog, which) -> openOverlaySettings())
+                    .show();
             return;
         }
         if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)
                 != PackageManager.PERMISSION_GRANTED
                 && !prefs.getBoolean("notification_asked", false)) {
-            prefs.edit().putBoolean("notification_asked", true).apply();
-            requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 20);
+            new AlertDialog.Builder(this)
+                    .setTitle("Управление из шторки")
+                    .setMessage("Разреши уведомления, чтобы ставить снег на паузу и выключать его из шторки.")
+                    .setNegativeButton("Без уведомлений", (dialog, which) -> {
+                        prefs.edit().putBoolean("notification_asked", true).apply();
+                        startSnow();
+                    })
+                    .setPositiveButton("Разрешить", (dialog, which) -> {
+                        prefs.edit().putBoolean("notification_asked", true).apply();
+                        requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, NOTIFICATION_PERMISSION);
+                    })
+                    .show();
             return;
         }
+        startSnow();
+    }
+
+    private void openOverlaySettings() {
+        Intent settings = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION);
+        if (Build.VERSION.SDK_INT < 30) settings.setData(Uri.parse("package:" + getPackageName()));
+        waitingOverlay = true;
+        try {
+            startActivityForResult(settings, OVERLAY_SETTINGS_REQUEST);
+        } catch (android.content.ActivityNotFoundException | SecurityException error) {
+            waitingOverlay = false;
+            Toast.makeText(this, "Открой разрешение показа поверх других приложений в настройках Android.", Toast.LENGTH_LONG).show();
+        }
+    }
+
+    private void startSnow() {
         try {
             startForegroundService(new Intent(this, SnowService.class));
             handler.postDelayed(this::refreshStatus, 250);
@@ -529,7 +581,10 @@ public class MainActivity extends Activity {
 
     @Override public void onRequestPermissionsResult(int code, String[] permissions, int[] results) {
         super.onRequestPermissionsResult(code, permissions, results);
-        if (code == 20) requestStart();
+        if (code == NOTIFICATION_PERMISSION) {
+            startRequested = true;
+            handler.post(this::continuePendingStart);
+        }
     }
 
     @Override protected void onNewIntent(Intent intent) {
@@ -548,11 +603,14 @@ public class MainActivity extends Activity {
         refreshWallpaperAssignment();
         if (smsProbeLeftApp) handler.postDelayed(this::finishSmsProbe, 900);
         handler.post(statusRefresh);
-        if (startRequested || (waitingOverlay && Settings.canDrawOverlays(this))) {
-            startRequested = false;
-            waitingOverlay = false;
-            handler.post(this::requestStart);
-        }
+        handler.post(this::continuePendingStart);
+    }
+
+    private void continuePendingStart() {
+        if (!resumed || (!startRequested && !(waitingOverlay && Settings.canDrawOverlays(this)))) return;
+        startRequested = false;
+        waitingOverlay = false;
+        requestStart();
     }
 
     @Override protected void onPause() {
@@ -710,6 +768,12 @@ public class MainActivity extends Activity {
 
     @Override protected void onActivityResult(int code, int result, Intent data) {
         super.onActivityResult(code, result, data);
+        if (code == OVERLAY_SETTINGS_REQUEST) {
+            if (waitingOverlay && Settings.canDrawOverlays(this)) startRequested = true;
+            waitingOverlay = false;
+            handler.post(this::continuePendingStart);
+            return;
+        }
         HonorThemeExport.Selection selection = HonorThemeExport.fromRequestCode(code);
         if (code == SYSTEM_UI_REQUEST || selection != null) {
             resumeAfterSystemUi();
@@ -729,7 +793,7 @@ public class MainActivity extends Activity {
     }
 
     private void writeTheme(Uri destination, HonorThemeExport.Selection selection) {
-        if (exportingTheme) return;
+        if (exportingTheme || saveThemeButton == null) return;
         exportingTheme = true;
         saveThemeButton.setEnabled(false);
         saveThemeButton.setText("Сохраняю тему…");

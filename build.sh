@@ -5,6 +5,25 @@ ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 SDK="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-$HOME/Android/Sdk}}"
 TOOLS="$SDK/build-tools/36.1.0"
 PLATFORM="$SDK/platforms/android-36/android.jar"
+mode="${1:---debug}"
+if [[ $# -gt 1 || ( "$mode" != --debug && "$mode" != --release ) ]]; then
+    printf 'Usage: bash build.sh [--debug|--release]\n' >&2
+    exit 2
+fi
+
+if [[ "$mode" == --release ]]; then
+    : "${SNEZHOK_KEYSTORE:?Set SNEZHOK_KEYSTORE to an existing release signing key store}"
+    : "${SNEZHOK_KEY_ALIAS:?Set SNEZHOK_KEY_ALIAS}"
+    : "${SNEZHOK_KEYSTORE_PASSWORD:?Set SNEZHOK_KEYSTORE_PASSWORD}"
+    : "${SNEZHOK_KEY_PASSWORD:?Set SNEZHOK_KEY_PASSWORD}"
+    if [[ ! -f "$SNEZHOK_KEYSTORE" || ! -r "$SNEZHOK_KEYSTORE" ]]; then
+        printf 'Release signing needs a readable, existing key store.\n' >&2
+        exit 2
+    fi
+    signing=(--ks "$SNEZHOK_KEYSTORE" --ks-key-alias "$SNEZHOK_KEY_ALIAS"
+        --ks-pass env:SNEZHOK_KEYSTORE_PASSWORD --key-pass env:SNEZHOK_KEY_PASSWORD)
+fi
+
 VERSION="$(python3 - "$ROOT/AndroidManifest.xml" <<'PY'
 import sys
 import xml.etree.ElementTree as ET
@@ -14,7 +33,7 @@ PY
 # A fresh directory prevents deleted/renamed Java classes leaking into a later APK.
 mkdir -p "$ROOT/build"
 BUILD="$(mktemp -d "$ROOT/build/v${VERSION}-XXXXXXXX")"
-mkdir -p "$BUILD/gen" "$BUILD/classes" "$BUILD/dex" "$ROOT/.signing"
+mkdir -p "$BUILD/gen" "$BUILD/classes" "$BUILD/dex"
 "$TOOLS/aapt2" compile --dir "$ROOT/res" -o "$BUILD/resources.zip"
 "$TOOLS/aapt2" link -o "$BUILD/resources.apk" -I "$PLATFORM" \
     --manifest "$ROOT/AndroidManifest.xml" --java "$BUILD/gen" \
@@ -59,15 +78,25 @@ with zipfile.ZipFile(sys.argv[1], "a", compression=zipfile.ZIP_DEFLATED) as pack
         package.writestr(f"assets/honor-garland/{name}", data, compress_type=zipfile.ZIP_STORED)
 PY
 "$TOOLS/zipalign" -f -p 4 "$BUILD/unsigned.apk" "$BUILD/aligned.apk"
-KEY="$ROOT/.signing/debug.keystore"
-if [[ ! -f "$KEY" ]]; then
-    keytool -genkeypair -keystore "$KEY" -storepass android -keypass android \
-        -alias androiddebugkey -keyalg RSA -keysize 3072 -validity 10000 \
-        -dname 'CN=Snowfall Local Development' -noprompt
+if [[ "$mode" == --debug ]]; then
+    KEY="${SNEZHOK_DEBUG_KEYSTORE:-$ROOT/.signing/debug.keystore}"
+    if [[ -n "${SNEZHOK_DEBUG_KEYSTORE:-}" && ! -f "$KEY" ]]; then
+        printf 'The requested debug key store does not exist.\n' >&2
+        exit 2
+    fi
+    if [[ ! -f "$KEY" ]]; then
+        mkdir -p "$ROOT/.signing"
+        keytool -genkeypair -keystore "$KEY" -storepass android -keypass android \
+            -alias androiddebugkey -keyalg RSA -keysize 3072 -validity 10000 \
+            -dname 'CN=Snowfall Local Development' -noprompt
+        chmod 600 "$KEY"
+    fi
+    signing=(--ks "$KEY" --ks-pass pass:android --key-pass pass:android --ks-key-alias androiddebugkey)
 fi
-chmod 600 "$KEY"
-"$TOOLS/apksigner" sign --ks "$KEY" --ks-pass pass:android --key-pass pass:android \
-    --ks-key-alias androiddebugkey --out "$BUILD/Snezhok-${VERSION}.apk" "$BUILD/aligned.apk"
-"$TOOLS/apksigner" verify --verbose "$BUILD/Snezhok-${VERSION}.apk"
-"$TOOLS/aapt2" dump badging "$BUILD/Snezhok-${VERSION}.apk"
-sha256sum "$BUILD/Snezhok-${VERSION}.apk"
+APK="$BUILD/Snezhok-${VERSION}.apk"
+"$TOOLS/apksigner" sign "${signing[@]}" --out "$APK" "$BUILD/aligned.apk"
+"$TOOLS/apksigner" verify --verbose --print-certs "$APK" |
+    awk '/^Verifies$|^Verified using|^Signer #[0-9]+ certificate SHA-256 digest:/'
+"$TOOLS/zipalign" -c -p 4 "$APK"
+"$TOOLS/aapt2" dump badging "$APK"
+sha256sum "$APK"
